@@ -1020,6 +1020,215 @@ function closePosReceipt() {
   showToast('Vente encaissée avec succès !');
 }
 
+// ===== CLÔTURE DE CAISSE =====
+const CLOTURES_KEY = 'tabac_clotures';
+
+function openPosCloture() {
+  if (!posActiveTerminal) return;
+  const today = new Date().toISOString().split('T')[0];
+  const now   = new Date();
+  const todaySales = sales.filter(s => s.date === today && s.terminalId === posActiveTerminal.id);
+
+  const cashTotal    = todaySales.filter(s => !s.paymentMethod || s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+  const cacpayTotal  = todaySales.filter(s => s.paymentMethod === 'cacpay').reduce((sum, s) => sum + s.total, 0);
+  const waafiTotal   = todaySales.filter(s => s.paymentMethod === 'waafi').reduce((sum, s) => sum + s.total, 0);
+  const totalGeneral = todaySales.reduce((sum, s) => sum + s.total, 0);
+
+  const infoEl = document.getElementById('cloture-terminal-info');
+  if (infoEl) infoEl.innerHTML = `
+    <div class="cloture-terminal-name">${posActiveTerminal.name}</div>
+    <div class="cloture-terminal-meta">
+      ${posActiveTerminal.cashier ? '👤 ' + posActiveTerminal.cashier + ' &nbsp;·&nbsp; ' : ''}
+      📅 ${now.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}
+      &nbsp;·&nbsp; 🕐 ${now.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}
+    </div>`;
+
+  const statsEl = document.getElementById('cloture-stats');
+  if (statsEl) statsEl.innerHTML = `
+    <div class="cloture-stat-row">
+      <span class="cloture-stat-label">Nombre de transactions</span>
+      <span class="cloture-stat-val">${todaySales.length}</span>
+    </div>
+    <div class="cloture-stat-row">
+      <span class="cloture-stat-label">💵 Cash</span>
+      <span class="cloture-stat-val">${formatNumber(cashTotal)} DJF</span>
+    </div>
+    <div class="cloture-stat-row">
+      <span class="cloture-stat-label">📱 Cac Pay</span>
+      <span class="cloture-stat-val">${formatNumber(cacpayTotal)} DJF</span>
+    </div>
+    <div class="cloture-stat-row">
+      <span class="cloture-stat-label">📲 Waafi</span>
+      <span class="cloture-stat-val">${formatNumber(waafiTotal)} DJF</span>
+    </div>
+    <div class="cloture-stat-row cloture-stat-total">
+      <span class="cloture-stat-label">TOTAL GÉNÉRAL</span>
+      <span class="cloture-stat-val">${formatNumber(totalGeneral)} DJF</span>
+    </div>`;
+
+  const salesEl = document.getElementById('cloture-sales-list');
+  if (salesEl) {
+    if (todaySales.length === 0) {
+      salesEl.innerHTML = '<div class="cloture-empty">Aucune vente enregistrée aujourd\'hui.</div>';
+    } else {
+      salesEl.innerHTML = todaySales.map(s => `
+        <div class="cloture-sale-row">
+          <div class="cloture-sale-info">
+            <span class="cloture-sale-name">${s.productName}</span>
+            <span class="cloture-sale-qty">× ${s.qty}</span>
+          </div>
+          <div class="cloture-sale-right">
+            <span class="cloture-sale-pm">${s.paymentMethod === 'cacpay' ? '📱' : s.paymentMethod === 'waafi' ? '📲' : '💵'}</span>
+            <span class="cloture-sale-total">${formatNumber(s.total)} DJF</span>
+          </div>
+        </div>`).join('');
+    }
+  }
+
+  document.getElementById('cloture-fond').value = '';
+  document.getElementById('cloture-overlay').style.display = 'flex';
+  document.getElementById('cloture-wrap').style.display    = 'flex';
+}
+
+function closePosCloture() {
+  document.getElementById('cloture-overlay').style.display = 'none';
+  document.getElementById('cloture-wrap').style.display    = 'none';
+}
+
+function validerPosCloture() {
+  if (!confirm('Confirmer la clôture de la caisse pour aujourd\'hui ?')) return;
+  const today      = new Date().toISOString().split('T')[0];
+  const now        = new Date();
+  const todaySales = sales.filter(s => s.date === today && s.terminalId === posActiveTerminal.id);
+  const fond        = parseFloat(document.getElementById('cloture-fond').value) || 0;
+  const cashTotal   = todaySales.filter(s => !s.paymentMethod || s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+  const cacpayTotal = todaySales.filter(s => s.paymentMethod === 'cacpay').reduce((sum, s) => sum + s.total, 0);
+  const waafiTotal  = todaySales.filter(s => s.paymentMethod === 'waafi').reduce((sum, s) => sum + s.total, 0);
+  const totalGeneral = todaySales.reduce((sum, s) => sum + s.total, 0);
+
+  const cloture = {
+    id:             Date.now(),
+    date:           today,
+    heureStr:       now.toLocaleTimeString('fr-FR'),
+    terminalId:     posActiveTerminal.id,
+    terminalName:   posActiveTerminal.name,
+    cashier:        posActiveTerminal.cashier || '',
+    fondOuverture:  fond,
+    cashTotal, cacpayTotal, waafiTotal, totalGeneral,
+    nbTransactions: todaySales.length,
+  };
+
+  const clotures = JSON.parse(localStorage.getItem(CLOTURES_KEY) || '[]');
+  clotures.unshift(cloture);
+  localStorage.setItem(CLOTURES_KEY, JSON.stringify(clotures));
+  addLog('pos', `Clôture de caisse — ${posActiveTerminal.name}`,
+    `Total : ${formatNumber(totalGeneral)} DJF · ${todaySales.length} transaction(s)`);
+  showToast('Clôture enregistrée avec succès !');
+  closePosCloture();
+}
+
+function exportCloturePDF() {
+  if (!window.jspdf) { showToast('jsPDF non disponible'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc  = new jsPDF();
+  const today = new Date().toISOString().split('T')[0];
+  const now   = new Date();
+  const todaySales  = sales.filter(s => s.date === today && s.terminalId === posActiveTerminal.id);
+  const fond        = parseFloat(document.getElementById('cloture-fond').value) || 0;
+  const cashTotal   = todaySales.filter(s => !s.paymentMethod || s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+  const cacpayTotal = todaySales.filter(s => s.paymentMethod === 'cacpay').reduce((sum, s) => sum + s.total, 0);
+  const waafiTotal  = todaySales.filter(s => s.paymentMethod === 'waafi').reduce((sum, s) => sum + s.total, 0);
+  const totalGeneral = todaySales.reduce((sum, s) => sum + s.total, 0);
+  const company = JSON.parse(localStorage.getItem(COMPANY_KEY) || '{}');
+  const cName   = company.name || 'TabacPro';
+
+  const NAVY  = [26, 26, 46];
+  const GOLD  = [232, 176, 75];
+  const WHITE = [255, 255, 255];
+  const GRAY  = [120, 120, 130];
+
+  // En-tête
+  doc.setFillColor(...NAVY); doc.rect(0, 0, 210, 38, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(...WHITE);
+  doc.text('RAPPORT DE CLÔTURE DE CAISSE', 14, 16);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+  doc.text(cName, 14, 27);
+  doc.text(`${now.toLocaleDateString('fr-FR')} — ${now.toLocaleTimeString('fr-FR')}`, 196, 27, { align: 'right' });
+
+  let y = 48;
+
+  // Infos caisse
+  doc.setFillColor(245, 247, 250); doc.rect(14, y, 182, 20, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...NAVY);
+  doc.text('Caisse :', 18, y + 7);
+  doc.setFont('helvetica', 'normal');
+  doc.text(posActiveTerminal.name + (posActiveTerminal.location ? ' — ' + posActiveTerminal.location : ''), 42, y + 7);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Caissier :', 18, y + 15);
+  doc.setFont('helvetica', 'normal');
+  doc.text(posActiveTerminal.cashier || '—', 42, y + 15);
+  y += 28;
+
+  // Résumé financier
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...NAVY);
+  doc.text('RÉSUMÉ FINANCIER', 14, y); y += 8;
+
+  const rows = [
+    ["Fond de caisse d'ouverture", formatNumber(fond) + ' DJF'],
+    ['💵 Cash encaissé',           formatNumber(cashTotal) + ' DJF'],
+    ['📱 Cac Pay',                 formatNumber(cacpayTotal) + ' DJF'],
+    ['📲 Waafi',                   formatNumber(waafiTotal) + ' DJF'],
+    ['Nombre de transactions',     String(todaySales.length)],
+  ];
+  rows.forEach(([lbl, val], i) => {
+    if (i % 2 === 0) { doc.setFillColor(248, 249, 251); doc.rect(14, y, 182, 9, 'F'); }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(80, 80, 90);
+    doc.text(lbl, 18, y + 6);
+    doc.setFont('helvetica', 'bold');
+    doc.text(val, 194, y + 6, { align: 'right' });
+    y += 10;
+  });
+  doc.setFillColor(...NAVY); doc.rect(14, y, 182, 12, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...WHITE);
+  doc.text('TOTAL GÉNÉRAL', 18, y + 8);
+  doc.text(formatNumber(totalGeneral) + ' DJF', 194, y + 8, { align: 'right' });
+  y += 20;
+
+  // Détail des ventes
+  if (todaySales.length > 0) {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...NAVY);
+    doc.text('DÉTAIL DES VENTES', 14, y); y += 8;
+    doc.setFillColor(...GOLD); doc.rect(14, y, 182, 8, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...NAVY);
+    doc.text('Produit', 18, y + 5);
+    doc.text('Qté', 120, y + 5);
+    doc.text('Paiement', 145, y + 5);
+    doc.text('Total', 194, y + 5, { align: 'right' });
+    y += 10;
+    todaySales.forEach((s, i) => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      if (i % 2 === 0) { doc.setFillColor(248, 249, 251); doc.rect(14, y, 182, 8, 'F'); }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(50, 50, 60);
+      doc.text(s.productName.substring(0, 42), 18, y + 5);
+      doc.text(String(s.qty), 120, y + 5);
+      const pm = s.paymentMethod === 'cacpay' ? 'Cac Pay' : s.paymentMethod === 'waafi' ? 'Waafi' : 'Cash';
+      doc.text(pm, 145, y + 5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(formatNumber(s.total) + ' DJF', 194, y + 5, { align: 'right' });
+      y += 9;
+    });
+  }
+
+  // Pied de page
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+  doc.line(14, 282, 196, 282);
+  doc.text(`Clôture générée le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR')} — TabacPro`, 105, 287, { align: 'center' });
+
+  const dateStr = today.replace(/-/g, '');
+  doc.save(`Cloture_${posActiveTerminal.name.replace(/\s/g, '_')}_${dateStr}.pdf`);
+  showToast('Rapport de clôture exporté !');
+}
+
 // ===== NOTIFICATIONS STOCK EN TEMPS RÉEL =====
 const NOTIF_READ_KEY    = 'tabac_notif_read';
 const NOTIF_PREV_KEY    = 'tabac_prev_alert_ids';

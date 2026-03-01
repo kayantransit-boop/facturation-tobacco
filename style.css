@@ -1764,7 +1764,146 @@ tbody tr:hover { background: #fafafa; }
   transition: background 0.15s;
 }
 .pos-terminal-bar-btn:hover { background: rgba(255,255,255,0.3); }
-.pos-terminal-bar-exit { background: rgba(0,0,0,0.15); }
+.pos-terminal-bar-exit   { background: rgba(0,0,0,0.15); }
+.pos-cloture-btn         { background: rgba(239,68,68,0.25); }
+.pos-cloture-btn:hover   { background: rgba(239,68,68,0.45) !important; }
+
+/* ===== CLÔTURE DE CAISSE ===== */
+.cloture-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 9997;
+}
+.cloture-wrap {
+  position: fixed; inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+  padding: 20px;
+  overflow-y: auto;
+}
+.cloture-card {
+  background: white;
+  border-radius: 20px;
+  width: 500px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+  animation: loginFadeIn 0.25s ease;
+}
+.cloture-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 28px 18px;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  color: white;
+  border-radius: 20px 20px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.cloture-close {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+.cloture-close:hover { background: rgba(255,255,255,0.3); }
+.cloture-terminal-info {
+  padding: 16px 28px;
+  background: #f8f9fb;
+  border-bottom: 1px solid #e5e7eb;
+}
+.cloture-terminal-name { font-size: 16px; font-weight: 800; color: #1a1a2e; }
+.cloture-terminal-meta { font-size: 12px; color: #6b7280; margin-top: 3px; }
+.cloture-section { padding: 18px 28px; border-bottom: 1px solid #f0f0f0; }
+.cloture-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #9ca3af; margin-bottom: 12px; }
+.cloture-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.cloture-input:focus { border-color: #e8b04b; }
+.cloture-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 14px;
+  border-radius: 8px;
+  margin-bottom: 5px;
+  background: #f8f9fb;
+}
+.cloture-stat-row.cloture-stat-total {
+  background: #1a1a2e;
+  color: white;
+  font-weight: 700;
+}
+.cloture-stat-label { font-size: 13px; color: #374151; }
+.cloture-stat-val   { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+.cloture-stat-total .cloture-stat-label,
+.cloture-stat-total .cloture-stat-val   { color: white; }
+.cloture-sales-list { max-height: 220px; overflow-y: auto; }
+.cloture-sale-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  background: #f8f9fb;
+}
+.cloture-sale-info  { display: flex; flex-direction: column; gap: 2px; }
+.cloture-sale-name  { font-size: 13px; font-weight: 600; color: #1a1a2e; }
+.cloture-sale-qty   { font-size: 11px; color: #9ca3af; }
+.cloture-sale-right { display: flex; align-items: center; gap: 8px; }
+.cloture-sale-pm    { font-size: 16px; }
+.cloture-sale-total { font-size: 13px; font-weight: 700; color: #1a1a2e; }
+.cloture-empty      { text-align: center; color: #9ca3af; font-size: 13px; padding: 16px 0; }
+.cloture-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 28px;
+}
+.btn-cloture-validate {
+  width: 100%; padding: 13px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white; border: none;
+  border-radius: 12px; font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-cloture-validate:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-cloture-pdf {
+  width: 100%; padding: 12px;
+  background: linear-gradient(135deg, #1a1a2e, #2d2d5e);
+  color: white; border: none;
+  border-radius: 12px; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-cloture-pdf:hover { opacity: 0.9; }
+.btn-cloture-cancel {
+  width: 100%; padding: 11px;
+  background: #f3f4f6; color: #6b7280;
+  border: none; border-radius: 12px;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: background 0.15s;
+}
+.btn-cloture-cancel:hover { background: #e5e7eb; }
 
 /* Éditeur terminal */
 .pos-editor-overlay {

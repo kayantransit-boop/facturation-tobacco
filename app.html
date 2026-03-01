@@ -843,6 +843,7 @@
           <span class="pos-terminal-bar-cashier" id="pos-terminal-bar-cashier"></span>
         </div>
         <div class="pos-terminal-bar-actions">
+          <button class="pos-terminal-bar-btn pos-cloture-btn" onclick="openPosCloture()">🔒 Clôture</button>
           <button class="pos-terminal-bar-btn" onclick="openPosTerminalEditor(posActiveTerminal && posActiveTerminal.id)">⚙️ Paramètres</button>
           <button class="pos-terminal-bar-btn pos-terminal-bar-exit" onclick="exitPosTerminal()">← Changer de caisse</button>
         </div>
@@ -967,6 +968,39 @@
       <div class="pos-receipt-actions no-print">
         <button class="pos-receipt-print-btn" onclick="printPosReceipt()">🖨️ Imprimer</button>
         <button class="pos-receipt-close-btn" onclick="closePosReceipt()">✕ Fermer</button>
+      </div>
+    </div>
+
+    <!-- ===== MODAL CLÔTURE DE CAISSE ===== -->
+    <div class="cloture-overlay" id="cloture-overlay" style="display:none" onclick="closePosCloture()"></div>
+    <div class="cloture-wrap" id="cloture-wrap" style="display:none">
+      <div class="cloture-card">
+        <div class="cloture-header">
+          <span>🔒 Clôture de caisse</span>
+          <button class="cloture-close" onclick="closePosCloture()">✕</button>
+        </div>
+        <div class="cloture-terminal-info" id="cloture-terminal-info"></div>
+
+        <div class="cloture-section">
+          <div class="cloture-section-title">Fond de caisse d'ouverture (DJF)</div>
+          <input type="number" id="cloture-fond" class="cloture-input" placeholder="0" min="0" />
+        </div>
+
+        <div class="cloture-section">
+          <div class="cloture-section-title">Résumé des ventes du jour</div>
+          <div class="cloture-stats" id="cloture-stats"></div>
+        </div>
+
+        <div class="cloture-section">
+          <div class="cloture-section-title">Détail des ventes</div>
+          <div class="cloture-sales-list" id="cloture-sales-list"></div>
+        </div>
+
+        <div class="cloture-actions">
+          <button class="btn-cloture-pdf" onclick="exportCloturePDF()">📄 Exporter PDF</button>
+          <button class="btn-cloture-validate" onclick="validerPosCloture()">✅ Clôturer la caisse</button>
+          <button class="btn-cloture-cancel" onclick="closePosCloture()">Annuler</button>
+        </div>
       </div>
     </div>
 
