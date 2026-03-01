@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Comptabilité Tabac</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ========== ÉCRAN DE CONNEXION ========== -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-bg-shapes">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="login-card">
+      <div class="login-logo">
+        <span class="login-logo-icon">🚬</span>
+        <div>
+          <div class="login-brand">TabacPro</div>
+          <div class="login-brand-sub">Comptabilité Entreprise</div>
+        </div>
+      </div>
+
+      <h2 class="login-title">Connexion</h2>
+      <p class="login-subtitle">Accès sécurisé à votre espace de gestion</p>
+
+      <form id="login-form" onsubmit="doLogin(event)" autocomplete="off">
+        <div class="login-field">
+          <label>Nom d'utilisateur</label>
+          <div class="login-input-wrap">
+            <span class="login-icon">👤</span>
+            <input type="text" id="login-username" placeholder="admin" autocomplete="username" required />
+          </div>
+        </div>
+        <div class="login-field">
+          <label>Mot de passe</label>
+          <div class="login-input-wrap">
+            <span class="login-icon">🔒</span>
+            <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" required />
+            <button type="button" class="login-eye" onclick="togglePwdVis(this)">👁</button>
+          </div>
+        </div>
+        <div id="login-error" class="login-error" style="display:none">
+          ❌ Identifiants incorrects. Veuillez réessayer.
+        </div>
+        <button type="submit" class="login-submit" id="login-btn">
+          <span id="login-btn-text">Se connecter</span>
+        </button>
+      </form>
+
+      <div class="login-hint">
+        Première connexion : <strong>admin</strong> / <strong>admin123</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="logo">
+      <span class="logo-icon">🚬</span>
+      <span class="logo-text">TabacPro</span>
+    </div>
+    <nav>
+      <a href="#" class="nav-link active" onclick="showPage('dashboard')">
+        <span>📊</span> Tableau de bord
+      </a>
+      <a href="#" class="nav-link" onclick="showPage('ventes')">
+        <span>💰</span> Gestion des ventes
+      </a>
+      <a href="#" class="nav-link" onclick="showPage('produits')">
+        <span>📦</span> Produits
+      </a>
+      <a href="#" class="nav-link" onclick="showPage('achats')">
+        <span>🛒</span> Gestion des achats
+      </a>
+      <a href="#" class="nav-link" onclick="showPage('stock')">
+        <span>🏭</span> Gestion du stock
+      </a>
+      <a href="#" class="nav-link" onclick="showPage('factures')">
+        <span>🧾</span> Facturation
+      </a>
+      <a href="#" class="nav-link" onclick="showPage('rapports')">
+        <span>📈</span> Rapports
+      </a>
+      <a href="#" class="nav-link" onclick="showPage('journal')">
+        <span>📋</span> Journal d'activité
+      </a>
+      <a href="#" class="nav-link" onclick="showPage('pos')">
+        <span>🖥️</span> Point de vente
+      </a>
+      <a href="#" class="nav-link" onclick="showPage('parametres')">
+        <span>⚙️</span> Paramètres
+      </a>
+    </nav>
+
+    <!-- Utilisateur + déconnexion -->
+    <div class="sidebar-user">
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-avatar" id="sidebar-avatar">A</div>
+        <div>
+          <div class="sidebar-user-name" id="sidebar-username">admin</div>
+          <div class="sidebar-user-role">Administrateur</div>
+        </div>
+      </div>
+      <button class="sidebar-logout" onclick="doLogout()" title="Déconnexion">⏻</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div>
+        <h1 id="page-title">Tableau de bord</h1>
+        <p id="page-date"></p>
+      </div>
+      <div class="header-right">
+        <!-- Bouton Export PDF -->
+        <div class="pdf-dropdown" id="pdf-dropdown">
+          <button class="btn-pdf" onclick="togglePdfMenu()">
+            📄 Export PDF <span class="pdf-arrow">▾</span>
+          </button>
+          <div class="pdf-menu" id="pdf-menu">
+            <div class="pdf-menu-title">Exporter en PDF</div>
+            <button onclick="exportDashboardPDF()">📊 Tableau de bord</button>
+            <button onclick="exportVentesPDF()">💰 Liste des ventes</button>
+            <button onclick="exportAchatsPDF()">🛒 Liste des achats</button>
+            <button onclick="exportStockPDF()">🏭 État du stock</button>
+            <button onclick="exportRapportPDF()">📈 Rapport analytique</button>
+            <button onclick="exportPosSalesPDF()">🖥️ Rapport ventes POS</button>
+            <div class="pdf-menu-sep"></div>
+            <button onclick="exportAllPDF()">📦 Export complet</button>
+          </div>
+        </div>
+        <!-- Cloche de notifications stock -->
+        <div class="notif-bell-wrap" id="notif-bell-wrap">
+          <button class="notif-bell-btn" id="notif-bell-btn" onclick="toggleNotifPanel()" title="Alertes de stock">
+            🔔
+            <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+          </button>
+          <div class="notif-panel" id="notif-panel">
+            <div class="notif-panel-header">
+              <span>⚠️ Alertes de stock</span>
+              <button class="notif-mark-read" onclick="markAlertsRead()">Tout marquer lu</button>
+            </div>
+            <div class="notif-panel-body" id="notif-panel-body">
+              <div class="notif-empty">Chargement…</div>
+            </div>
+            <div class="notif-panel-footer">
+              <button class="notif-go-stock" onclick="toggleNotifPanel(); showPage('stock')">
+                Voir la gestion du stock →
+              </button>
+            </div>
+          </div>
+        </div>
+        <span class="company-name">Entreprise de Tabac</span>
+      </div>
+    </div>
+
+    <!-- PAGE: DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+
+      <!-- Bannière de bienvenue -->
+      <div class="dash-welcome">
+        <div>
+          <div class="dash-welcome-title">Bienvenue sur TabacPro 🚬</div>
+          <div class="dash-welcome-sub" id="dash-date-full"></div>
+        </div>
+        <div class="dash-welcome-badge">
+          <span id="dash-marge-label">Marge du mois</span>
+          <strong id="dash-marge-value">0 DJF</strong>
+        </div>
+      </div>
+
+      <!-- KPI Cards avec sparklines -->
+      <div class="dash-kpi-row">
+        <div class="dash-kpi-card dash-kpi-blue" style="--delay:0s">
+          <div class="dash-kpi-top">
+            <div>
+              <div class="dash-kpi-label">Ventes aujourd'hui</div>
+              <div class="dash-kpi-value" id="dk-today">0 DJF</div>
+              <div class="dash-kpi-delta" id="dk-today-delta"></div>
+            </div>
+            <div class="dash-kpi-icon-wrap dash-bg-blue">💰</div>
+          </div>
+          <canvas class="dash-spark" id="spark-today" height="44"></canvas>
+        </div>
+
+        <div class="dash-kpi-card dash-kpi-green" style="--delay:.08s">
+          <div class="dash-kpi-top">
+            <div>
+              <div class="dash-kpi-label">Ventes ce mois</div>
+              <div class="dash-kpi-value" id="dk-month">0 DJF</div>
+              <div class="dash-kpi-delta" id="dk-month-delta"></div>
+            </div>
+            <div class="dash-kpi-icon-wrap dash-bg-green">📅</div>
+          </div>
+          <canvas class="dash-spark" id="spark-month" height="44"></canvas>
+        </div>
+
+        <div class="dash-kpi-card dash-kpi-purple" style="--delay:.16s">
+          <div class="dash-kpi-top">
+            <div>
+              <div class="dash-kpi-label">Achats ce mois</div>
+              <div class="dash-kpi-value" id="dk-achats">0 DJF</div>
+              <div class="dash-kpi-delta" id="dk-achats-delta"></div>
+            </div>
+            <div class="dash-kpi-icon-wrap dash-bg-purple">🛒</div>
+          </div>
+          <canvas class="dash-spark" id="spark-achats" height="44"></canvas>
+        </div>
+
+        <div class="dash-kpi-card dash-kpi-orange" style="--delay:.24s">
+          <div class="dash-kpi-top">
+            <div>
+              <div class="dash-kpi-label">Transactions total</div>
+              <div class="dash-kpi-value" id="dk-count">0</div>
+              <div class="dash-kpi-delta" id="dk-count-delta"></div>
+            </div>
+            <div class="dash-kpi-icon-wrap dash-bg-orange">🧾</div>
+          </div>
+          <canvas class="dash-spark" id="spark-count" height="44"></canvas>
+        </div>
+      </div>
+
+      <!-- Graphiques principaux -->
+      <div class="dash-charts-main">
+        <div class="dash-chart-box dash-chart-line-wrap">
+          <div class="dash-chart-hdr">
+            <span class="dash-chart-title">Évolution ventes & achats — 30 derniers jours</span>
+            <div class="dash-legend-row">
+              <span class="dash-legend-dot" style="background:#3b82f6"></span><span>Ventes</span>
+              <span class="dash-legend-dot" style="background:#e8b04b;margin-left:14px"></span><span>Achats</span>
+            </div>
+          </div>
+          <canvas id="dash-line-chart" height="200"></canvas>
+        </div>
+
+        <div class="dash-chart-box dash-chart-donut-wrap">
+          <div class="dash-chart-hdr">
+            <span class="dash-chart-title">Top produits</span>
+          </div>
+          <canvas id="dash-donut-chart" height="180"></canvas>
+          <div id="dash-donut-legend" class="donut-legend"></div>
+        </div>
+      </div>
+
+      <!-- Rangée inférieure -->
+      <div class="dash-bottom-row">
+
+        <!-- Top produits barres -->
+        <div class="section">
+          <h2>🏆 Classement produits</h2>
+          <div id="dash-prod-bars"></div>
+        </div>
+
+        <!-- Activité récente -->
+        <div class="section">
+          <h2>🕐 Activité récente</h2>
+          <div id="dash-activity"></div>
+
+          <h2 style="margin-top:20px;padding-top:16px;border-top:2px solid #f0f2f5">⚠️ Alertes stock</h2>
+          <div id="dash-stock-alerts"></div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- PAGE: VENTES -->
+    <div id="page-ventes" class="page">
+      <div class="section">
+        <h2>Nouvelle vente</h2>
+        <form id="sale-form" onsubmit="addSale(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Produit *</label>
+              <select id="sale-product" required>
+                <option value="">-- Choisir un produit --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Quantité *</label>
+              <input type="number" id="sale-qty" min="1" value="1" required />
+            </div>
+            <div class="form-group">
+              <label>Prix unitaire (DJF) *</label>
+              <input type="number" id="sale-price" min="0" step="1" required />
+            </div>
+            <div class="form-group">
+              <label>Client (optionnel)</label>
+              <input type="text" id="sale-client" placeholder="Nom du client" />
+            </div>
+            <div class="form-group">
+              <label>Date *</label>
+              <input type="date" id="sale-date" required />
+            </div>
+            <div class="form-group">
+              <label>Note</label>
+              <input type="text" id="sale-note" placeholder="Remarque..." />
+            </div>
+          </div>
+          <div class="total-preview">
+            <span>Total : </span>
+            <strong id="total-preview">0 DJF</strong>
+          </div>
+          <button type="submit" class="btn btn-primary">Enregistrer la vente</button>
+        </form>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <h2>Historique des ventes</h2>
+          <div class="filters">
+            <input type="month" id="filter-month" onchange="filterSales()" />
+            <input type="text" id="filter-search" placeholder="Rechercher..." oninput="filterSales()" />
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Produit</th>
+              <th>Qté</th>
+              <th>Prix unit.</th>
+              <th>Total</th>
+              <th>Client</th>
+              <th>Note</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="sales-table">
+            <tr><td colspan="8" class="empty">Aucune vente enregistrée</td></tr>
+          </tbody>
+        </table>
+        <div class="table-footer">
+          <strong>Total filtré : <span id="filtered-total">0 DJF</span></strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: PRODUITS -->
+    <div id="page-produits" class="page">
+      <div class="section">
+        <h2>Ajouter un produit</h2>
+        <form id="product-form" onsubmit="addProduct(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Nom du produit *</label>
+              <input type="text" id="prod-name" placeholder="Ex: Marlboro Rouge" required />
+            </div>
+            <div class="form-group">
+              <label>Catégorie</label>
+              <select id="prod-category">
+                <option value="Cigarettes">Cigarettes</option>
+                <option value="Cigares">Cigares</option>
+                <option value="Tabac à rouler">Tabac à rouler</option>
+                <option value="Chicha">Chicha</option>
+                <option value="Accessoires">Accessoires</option>
+                <option value="Autre">Autre</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Prix de vente (DJF)</label>
+              <input type="number" id="prod-price" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label>Quantité initiale en stock</label>
+              <input type="number" id="prod-initial-qty" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label>Prix d'achat unitaire (DJF)</label>
+              <input type="number" id="prod-initial-price" min="0" step="1" placeholder="0 (optionnel)" />
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <input type="text" id="prod-desc" placeholder="Description optionnelle" />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Ajouter le produit</button>
+        </form>
+      </div>
+
+      <div class="section">
+        <h2>Liste des produits</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Catégorie</th>
+              <th>Prix vente (DJF)</th>
+              <th>Description</th>
+              <th>Stock actuel</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="products-table">
+            <tr><td colspan="5" class="empty">Aucun produit enregistré</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGE: ACHATS -->
+    <div id="page-achats" class="page">
+      <div class="section">
+        <h2>Nouvel achat fournisseur</h2>
+        <form id="purchase-form" onsubmit="addPurchase(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Produit *</label>
+              <select id="ach-product" required>
+                <option value="">-- Choisir un produit --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Fournisseur</label>
+              <input type="text" id="ach-supplier" placeholder="Nom du fournisseur" />
+            </div>
+            <div class="form-group">
+              <label>Quantité *</label>
+              <input type="number" id="ach-qty" min="1" value="1" required />
+            </div>
+            <div class="form-group">
+              <label>Prix d'achat unitaire (DJF) *</label>
+              <input type="number" id="ach-price" min="0" step="1" required />
+            </div>
+            <div class="form-group">
+              <label>Date *</label>
+              <input type="date" id="ach-date" required />
+            </div>
+            <div class="form-group">
+              <label>Note</label>
+              <input type="text" id="ach-note" placeholder="Remarque..." />
+            </div>
+          </div>
+          <div class="total-preview">
+            <span>Coût total : </span>
+            <strong id="ach-total-preview">0 DJF</strong>
+          </div>
+          <button type="submit" class="btn btn-primary">Enregistrer l'achat</button>
+        </form>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <h2>Historique des achats</h2>
+          <div class="filters">
+            <input type="month" id="ach-filter-month" onchange="filterPurchases()" />
+            <input type="text" id="ach-filter-search" placeholder="Rechercher..." oninput="filterPurchases()" />
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Produit</th>
+              <th>Fournisseur</th>
+              <th>Qté</th>
+              <th>Prix unit.</th>
+              <th>Coût total</th>
+              <th>Note</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="purchases-table">
+            <tr><td colspan="8" class="empty">Aucun achat enregistré</td></tr>
+          </tbody>
+        </table>
+        <div class="table-footer">
+          <strong>Total filtré : <span id="ach-filtered-total">0 DJF</span></strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: STOCK -->
+    <div id="page-stock" class="page">
+      <div class="section">
+        <div class="section-header">
+          <h2>État du stock</h2>
+          <div class="filters">
+            <input type="text" id="stock-search" placeholder="Rechercher un produit..." oninput="filterStock()" />
+          </div>
+        </div>
+        <div class="stock-legend">
+          <span class="badge badge-ok">En stock</span>
+          <span class="badge badge-low">Stock bas (≤ seuil)</span>
+          <span class="badge badge-out">Rupture</span>
+        </div>
+        <table style="margin-top:16px">
+          <thead>
+            <tr>
+              <th>Produit</th>
+              <th>Catégorie</th>
+              <th>Total acheté</th>
+              <th>Total vendu</th>
+              <th>Stock actuel</th>
+              <th>Seuil alerte</th>
+              <th>Valeur stock (DJF)</th>
+              <th>Statut</th>
+              <th>Seuil</th>
+            </tr>
+          </thead>
+          <tbody id="stock-table">
+            <tr><td colspan="9" class="empty">Aucun produit enregistré</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Résumé financier</h2>
+        <div class="cards" id="stock-summary-cards"></div>
+      </div>
+    </div>
+
+    <!-- PAGE: FACTURES -->
+    <div id="page-factures" class="page">
+
+      <!-- Formulaire nouvelle facture -->
+      <div class="section">
+        <h2>Nouvelle facture</h2>
+        <form id="invoice-form" onsubmit="createInvoice(event)">
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Nom du client *</label>
+              <input type="text" id="inv-client-name" placeholder="Nom ou raison sociale" required />
+            </div>
+            <div class="form-group">
+              <label>Téléphone</label>
+              <input type="text" id="inv-client-phone" placeholder="+253 77 00 00 00" />
+            </div>
+            <div class="form-group">
+              <label>Adresse client</label>
+              <input type="text" id="inv-client-addr" placeholder="Adresse" />
+            </div>
+            <div class="form-group">
+              <label>Date facture *</label>
+              <input type="date" id="inv-date" required />
+            </div>
+            <div class="form-group">
+              <label>Date échéance</label>
+              <input type="date" id="inv-due-date" />
+            </div>
+            <div class="form-group">
+              <label>TVA (%)</label>
+              <input type="number" id="inv-tva" min="0" max="100" value="0" step="0.1" />
+            </div>
+          </div>
+
+          <!-- Lignes articles -->
+          <div class="invoice-items-header">
+            <h3>Articles</h3>
+            <button type="button" class="btn btn-outline btn-sm" onclick="addInvoiceRow()">+ Ajouter une ligne</button>
+          </div>
+          <table class="invoice-items-table">
+            <thead>
+              <tr>
+                <th>Produit / Description</th>
+                <th>Quantité</th>
+                <th>Prix unit. (DJF)</th>
+                <th>Total (DJF)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="invoice-rows">
+              <!-- lignes ajoutées dynamiquement -->
+            </tbody>
+          </table>
+
+          <div class="invoice-totals">
+            <div class="invoice-total-row"><span>Sous-total :</span><strong id="inv-subtotal">0 DJF</strong></div>
+            <div class="invoice-total-row"><span>TVA (<span id="inv-tva-pct">0</span>%) :</span><strong id="inv-tva-amount">0 DJF</strong></div>
+            <div class="invoice-total-row total-final"><span>TOTAL À PAYER :</span><strong id="inv-total-final">0 DJF</strong></div>
+          </div>
+
+          <div class="form-group" style="margin-top:16px">
+            <label>Notes / Conditions de paiement</label>
+            <input type="text" id="inv-notes" placeholder="Ex: Paiement à 30 jours..." />
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="margin-top:16px">Créer la facture</button>
+        </form>
+      </div>
+
+      <!-- Liste des factures -->
+      <div class="section">
+        <div class="section-header">
+          <h2>Liste des factures</h2>
+          <div class="filters">
+            <select id="inv-filter-status" onchange="filterInvoices()">
+              <option value="">Tous les statuts</option>
+              <option value="brouillon">Brouillon</option>
+              <option value="envoyee">Envoyée</option>
+              <option value="payee">Payée</option>
+              <option value="annulee">Annulée</option>
+            </select>
+            <input type="text" id="inv-filter-search" placeholder="Rechercher client..." oninput="filterInvoices()" />
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>N° Facture</th>
+              <th>Date</th>
+              <th>Client</th>
+              <th>Total</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="invoices-table">
+            <tr><td colspan="6" class="empty">Aucune facture créée</td></tr>
+          </tbody>
+        </table>
+        <div class="table-footer">
+          <strong>Total facturé : <span id="inv-filtered-total">0 DJF</span></strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: RAPPORTS -->
+    <div id="page-rapports" class="page">
+
+      <!-- Barre de contrôle -->
+      <div class="rpt-toolbar">
+        <div class="rpt-period-btns">
+          <button class="rpt-btn active" onclick="rptSetPeriod('month',this)">Ce mois</button>
+          <button class="rpt-btn" onclick="rptSetPeriod('quarter',this)">Trimestre</button>
+          <button class="rpt-btn" onclick="rptSetPeriod('year',this)">Cette année</button>
+          <button class="rpt-btn" onclick="rptSetPeriod('all',this)">Tout</button>
+        </div>
+        <div class="rpt-custom-range">
+          <input type="date" id="rpt-from" onchange="rptSetPeriod('custom')" />
+          <span>→</span>
+          <input type="date" id="rpt-to"   onchange="rptSetPeriod('custom')" />
+        </div>
+        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimer</button>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="cards" id="rpt-kpi-cards"></div>
+
+      <!-- Ligne 1 de graphiques -->
+      <div class="rpt-charts-row">
+        <div class="rpt-chart-box rpt-chart-wide">
+          <div class="rpt-chart-title">Ventes mensuelles (DJF)</div>
+          <canvas id="chart-bar-monthly" height="220"></canvas>
+        </div>
+        <div class="rpt-chart-box">
+          <div class="rpt-chart-title">Répartition par produit</div>
+          <canvas id="chart-donut-products" height="220"></canvas>
+          <div id="donut-legend" class="donut-legend"></div>
+        </div>
+      </div>
+
+      <!-- Ligne 2 de graphiques -->
+      <div class="rpt-charts-row">
+        <div class="rpt-chart-box">
+          <div class="rpt-chart-title">Ventes vs Achats (DJF)</div>
+          <canvas id="chart-bar-compare" height="220"></canvas>
+        </div>
+        <div class="rpt-chart-box rpt-chart-wide">
+          <div class="rpt-chart-title">Évolution des ventes cumulées (DJF)</div>
+          <canvas id="chart-line-cumul" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Tableaux -->
+      <div class="rpt-tables-row">
+
+        <!-- Top produits -->
+        <div class="section">
+          <h2>🏆 Top produits</h2>
+          <table>
+            <thead><tr><th>#</th><th>Produit</th><th>Qté vendue</th><th>CA (DJF)</th><th>Part</th></tr></thead>
+            <tbody id="rpt-top-products"></tbody>
+          </table>
+        </div>
+
+        <!-- Top clients -->
+        <div class="section">
+          <h2>👤 Top clients</h2>
+          <table>
+            <thead><tr><th>#</th><th>Client</th><th>Achats</th><th>Total (DJF)</th></tr></thead>
+            <tbody id="rpt-top-clients"></tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <!-- Détail des ventes -->
+      <div class="section">
+        <div class="section-header">
+          <h2>📋 Détail des ventes</h2>
+          <span id="rpt-period-label" style="font-size:13px;color:#888"></span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Produit</th><th>Client</th><th>Qté</th><th>Prix unit.</th><th>Total</th></tr>
+          </thead>
+          <tbody id="rpt-detail-table"></tbody>
+        </table>
+        <div class="table-footer">
+          Total période : <strong><span id="rpt-period-total">0 DJF</span></strong>
+        </div>
+      </div>
+
+      <!-- ===== RAPPORT POS PAR CAISSE ===== -->
+      <div class="rpt-pos-section">
+        <div class="rpt-pos-header">
+          <h2 style="margin:0;color:#1a1a2e">🖥️ Rapport par caisse POS</h2>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span id="rpt-pos-period" style="font-size:13px;color:#9ca3af"></span>
+            <button class="btn btn-primary" style="padding:8px 16px;font-size:13px" onclick="exportPosSalesPDF()">
+              📄 Exporter PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI par caisse -->
+        <div class="rpt-pos-terminals" id="rpt-pos-terminals"></div>
+
+        <!-- Graphique comparatif -->
+        <div class="rpt-charts-row" id="rpt-pos-charts-row" style="display:none">
+          <div class="rpt-chart-box rpt-chart-wide">
+            <div class="rpt-chart-title">CA par caisse (DJF)</div>
+            <canvas id="chart-pos-bar" height="200"></canvas>
+          </div>
+          <div class="rpt-chart-box">
+            <div class="rpt-chart-title">Répartition du CA par caisse</div>
+            <canvas id="chart-pos-donut" height="200"></canvas>
+            <div id="rpt-pos-donut-legend" class="donut-legend"></div>
+          </div>
+        </div>
+
+        <!-- Tableau détaillé par caisse -->
+        <div class="section" style="margin-top:0">
+          <div class="section-header">
+            <h2>📊 Ventes POS détaillées</h2>
+            <select id="rpt-pos-filter-terminal" onchange="renderPosSalesReport()" style="padding:6px 12px;border-radius:8px;border:2px solid #e5e7eb;font-size:13px">
+              <option value="">Toutes les caisses</option>
+            </select>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Caisse</th><th>Caissier</th><th>Produit</th><th>Client</th><th>Qté</th><th>Total</th></tr>
+            </thead>
+            <tbody id="rpt-pos-detail-table"></tbody>
+          </table>
+          <div class="table-footer">
+            Total POS période : <strong><span id="rpt-pos-total">0 DJF</span></strong>
+            &nbsp;·&nbsp; <span id="rpt-pos-count">0 transaction(s)</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- MODAL APERÇU FACTURE -->
+  <div id="invoice-preview-modal" class="invoice-modal" style="display:none">
+    <div class="invoice-modal-content">
+      <div class="invoice-modal-actions no-print">
+        <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimer</button>
+        <button class="btn btn-outline" onclick="closeInvoiceModal()">✕ Fermer</button>
+      </div>
+      <div id="invoice-print-area" class="invoice-print">
+        <!-- contenu généré dynamiquement -->
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: JOURNAL -->
+  <div id="page-journal" class="page">
+
+    <!-- Toolbar -->
+    <div class="journal-toolbar">
+      <div class="journal-filters">
+        <select id="jrn-filter-type" onchange="renderJournal()">
+          <option value="">Tous les types</option>
+          <option value="connexion">🔐 Connexions</option>
+          <option value="vente">💰 Ventes</option>
+          <option value="achat">🛒 Achats</option>
+          <option value="facture">🧾 Factures</option>
+          <option value="produit">📦 Produits</option>
+          <option value="suppression">🗑️ Suppressions</option>
+          <option value="parametres">⚙️ Paramètres</option>
+        </select>
+        <input type="date" id="jrn-filter-date" onchange="renderJournal()" />
+        <input type="text" id="jrn-filter-search" placeholder="Rechercher..." oninput="renderJournal()" />
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-outline" onclick="exportJournalPDF()">📄 Export PDF</button>
+        <button class="btn btn-danger" style="padding:8px 16px;font-size:13px" onclick="clearJournal()">🗑️ Vider</button>
+      </div>
+    </div>
+
+    <!-- Stats rapides -->
+    <div class="journal-stats" id="journal-stats"></div>
+
+    <!-- Timeline -->
+    <div class="journal-wrap">
+      <div class="journal-timeline" id="journal-timeline">
+        <div class="jrn-empty">Aucune activité enregistrée</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PAGE: POINT DE VENTE (POS) -->
+  <div id="page-pos" class="page">
+
+    <!-- ===== VUE A : HUB DE SÉLECTION ===== -->
+    <div id="pos-hub">
+      <div class="pos-hub-header">
+        <div>
+          <h2 style="margin:0;color:#1a1a2e">🖥️ Points de vente</h2>
+          <p style="margin:4px 0 0;font-size:13px;color:#9ca3af">Sélectionnez une caisse pour commencer</p>
+        </div>
+        <button class="pos-hub-add-btn" onclick="openPosTerminalEditor(null)">+ Nouvelle caisse</button>
+      </div>
+      <div class="pos-terminals-grid" id="pos-terminals-grid">
+        <!-- Cards générées par JS -->
+      </div>
+    </div>
+
+    <!-- ===== VUE B : CAISSE ACTIVE ===== -->
+    <div id="pos-terminal-view" style="display:none;flex-direction:column;height:100%">
+
+      <!-- Bandeau terminal -->
+      <div class="pos-terminal-bar" id="pos-terminal-bar">
+        <div class="pos-terminal-bar-info">
+          <span class="pos-terminal-bar-dot" id="pos-terminal-bar-dot"></span>
+          <span class="pos-terminal-bar-name" id="pos-terminal-bar-name">Caisse</span>
+          <span class="pos-terminal-bar-sep">·</span>
+          <span class="pos-terminal-bar-loc" id="pos-terminal-bar-loc"></span>
+          <span class="pos-terminal-bar-sep" id="pos-terminal-bar-sep2">·</span>
+          <span class="pos-terminal-bar-cashier" id="pos-terminal-bar-cashier"></span>
+        </div>
+        <div class="pos-terminal-bar-actions">
+          <button class="pos-terminal-bar-btn" onclick="openPosTerminalEditor(posActiveTerminal && posActiveTerminal.id)">⚙️ Paramètres</button>
+          <button class="pos-terminal-bar-btn pos-terminal-bar-exit" onclick="exitPosTerminal()">← Changer de caisse</button>
+        </div>
+      </div>
+
+      <!-- Layout catalogue + panier -->
+      <div class="pos-layout">
+
+        <!-- CATALOGUE PRODUITS -->
+        <div class="pos-catalog">
+          <div class="pos-catalog-toolbar">
+            <div class="pos-search-wrap">
+              <span class="pos-search-icon">🔍</span>
+              <input type="text" id="pos-search" class="pos-search-bar" placeholder="Rechercher un produit…" oninput="posSearchProducts()" />
+            </div>
+            <div class="pos-category-pills" id="pos-pills">
+              <button class="pos-pill active" onclick="posFilterCategory('')">Tous</button>
+              <button class="pos-pill" onclick="posFilterCategory('Cigarettes')">🚬 Cigarettes</button>
+              <button class="pos-pill" onclick="posFilterCategory('Cigares')">🍫 Cigares</button>
+              <button class="pos-pill" onclick="posFilterCategory('Tabac à rouler')">🌿 Tabac à rouler</button>
+              <button class="pos-pill" onclick="posFilterCategory('Chicha')">💨 Chicha</button>
+            </div>
+          </div>
+          <div class="pos-grid" id="pos-product-grid"></div>
+        </div>
+
+        <!-- PANIER -->
+        <div class="pos-cart">
+          <div class="pos-cart-header" id="pos-cart-header">
+            <span>🛒 Panier</span>
+            <span class="pos-cart-badge" id="pos-cart-badge">0 article</span>
+          </div>
+          <div class="pos-cart-body">
+            <div class="pos-cart-items" id="pos-cart-items">
+              <div class="pos-cart-empty">Le panier est vide.<br/>Cliquez sur un produit pour l'ajouter.</div>
+            </div>
+            <div class="pos-totals" id="pos-totals" style="display:none">
+              <div class="pos-total-row">
+                <span>Sous-total</span>
+                <span id="pos-subtotal">0 DJF</span>
+              </div>
+              <div class="pos-total-row" id="pos-tva-row" style="display:none">
+                <span id="pos-tva-label">TVA (0%)</span>
+                <span id="pos-tva-amount">0 DJF</span>
+              </div>
+              <div class="pos-total-row pos-total-final">
+                <span>Total</span>
+                <span id="pos-total">0 DJF</span>
+              </div>
+            </div>
+            <div class="pos-client-wrap" id="pos-client-wrap" style="display:none">
+              <input type="text" id="pos-client" class="pos-client-input" placeholder="👤 Nom du client (optionnel)" />
+            </div>
+          </div>
+          <div class="pos-cart-actions">
+            <button class="pos-checkout-btn" id="pos-checkout-btn" onclick="posCheckout()" disabled>💳 Encaisser</button>
+            <button class="pos-clear-btn" onclick="posClearCart()">🗑️ Vider le panier</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL PAIEMENT ===== -->
+    <div class="pos-payment-modal" id="pos-payment-modal" style="display:none">
+      <div class="pos-payment-card">
+        <div class="pos-payment-header">
+          <span>💳 Encaissement</span>
+          <button class="pos-payment-close" onclick="closePosModal()">✕</button>
+        </div>
+        <div class="pos-amount-label">Montant à payer</div>
+        <div class="pos-amount-display" id="pos-pay-total">0 DJF</div>
+
+        <!-- Mode de paiement -->
+        <div class="pos-method-label">Mode de paiement</div>
+        <div class="pos-method-btns">
+          <button class="pos-method-btn active" id="pm-cash"   onclick="posSelectPayment('cash')">💵 Cash</button>
+          <button class="pos-method-btn"         id="pm-cacpay" onclick="posSelectPayment('cacpay')">📱 Cac Pay</button>
+          <button class="pos-method-btn"         id="pm-waafi"  onclick="posSelectPayment('waafi')">📲 Waafi</button>
+        </div>
+
+        <!-- Section Cash -->
+        <div id="pos-cash-section">
+          <div class="pos-quick-label">Montant reçu rapide</div>
+          <div class="pos-quick-amounts">
+            <button onclick="posQuickAmount(0)">Exact</button>
+            <button onclick="posQuickAmount(500)">+500</button>
+            <button onclick="posQuickAmount(1000)">+1 000</button>
+            <button onclick="posQuickAmount(2000)">+2 000</button>
+            <button onclick="posQuickAmount(5000)">+5 000</button>
+            <button onclick="posQuickAmount(10000)">+10 000</button>
+          </div>
+          <div class="pos-received-wrap">
+            <label class="pos-received-label">Montant reçu (DJF)</label>
+            <input type="number" id="pos-received" class="pos-received-input" min="0" placeholder="0" oninput="posUpdateChange()" />
+          </div>
+          <div class="pos-change-display" id="pos-change-display" style="display:none">
+            <span class="pos-change-label">Monnaie à rendre</span>
+            <span class="pos-change-value" id="pos-change-value">0 DJF</span>
+          </div>
+        </div>
+
+        <!-- Section Mobile (Cac Pay / Waafi) -->
+        <div id="pos-mobile-pay-wrap" style="display:none">
+          <div class="pos-mobile-info" id="pos-mobile-info">📱 Cac Pay — montant exact débité</div>
+          <div class="pos-received-wrap">
+            <label class="pos-received-label">Référence transaction (optionnel)</label>
+            <input type="text" id="pos-mobile-ref" class="pos-received-input" placeholder="Ex: TXN-123456" style="font-size:14px;font-weight:600" />
+          </div>
+        </div>
+
+        <div class="pos-payment-actions">
+          <button class="pos-validate-btn" id="pos-validate-btn" onclick="posCompleteSale()" disabled>✅ Valider la vente</button>
+          <button class="pos-cancel-btn" onclick="closePosModal()">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL REÇU ===== -->
+    <div class="pos-receipt-overlay" id="pos-receipt-overlay" onclick="closePosReceipt()"></div>
+    <div class="pos-receipt-wrap" id="pos-receipt-wrap" style="display:none">
+      <div class="pos-receipt" id="pos-receipt-content"></div>
+      <div class="pos-receipt-actions no-print">
+        <button class="pos-receipt-print-btn" onclick="printPosReceipt()">🖨️ Imprimer</button>
+        <button class="pos-receipt-close-btn" onclick="closePosReceipt()">✕ Fermer</button>
+      </div>
+    </div>
+
+    <!-- ===== MODAL ÉDITEUR TERMINAL ===== -->
+    <div class="pos-editor-overlay" id="pos-editor-overlay" onclick="closePosEditor()"></div>
+    <div class="pos-editor-wrap" id="pos-editor-wrap" style="display:none">
+      <div class="pos-editor-card">
+        <div class="pos-editor-header">
+          <span id="pos-editor-title">Nouvelle caisse</span>
+          <button class="pos-editor-close" onclick="closePosEditor()">✕</button>
+        </div>
+        <form id="pos-terminal-form" onsubmit="savePosTerminal(event)">
+          <input type="hidden" id="pos-edit-id" value="" />
+          <div class="pos-editor-grid">
+            <div class="form-group">
+              <label>Nom de la caisse *</label>
+              <input type="text" id="pos-edit-name" placeholder="Ex: Caisse 1" required />
+            </div>
+            <div class="form-group">
+              <label>Emplacement</label>
+              <input type="text" id="pos-edit-location" placeholder="Ex: Entrée principale" />
+            </div>
+            <div class="form-group">
+              <label>Caissier par défaut</label>
+              <input type="text" id="pos-edit-cashier" placeholder="Ex: Mohamed" />
+            </div>
+            <div class="form-group">
+              <label>TVA (%)</label>
+              <input type="number" id="pos-edit-tax" min="0" max="100" step="0.1" placeholder="0" />
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Message pied de reçu</label>
+            <input type="text" id="pos-edit-footer" placeholder="Ex: Merci de votre visite !" />
+          </div>
+          <div class="pos-color-section">
+            <label>Couleur de la caisse</label>
+            <div class="pos-color-swatches" id="pos-color-swatches"></div>
+          </div>
+          <div class="pos-editor-actions">
+            <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+            <button type="button" class="btn btn-outline" onclick="closePosEditor()">Annuler</button>
+            <button type="button" class="btn btn-danger pos-editor-delete-btn" id="pos-editor-delete-btn" onclick="deletePosTerminal()" style="display:none">🗑️ Supprimer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PAGE: PARAMÈTRES -->
+  <div id="page-parametres" class="page">
+
+    <div class="param-grid">
+
+      <!-- Profil utilisateur -->
+      <div class="section">
+        <h2>👤 Profil utilisateur</h2>
+        <form onsubmit="changeUsername(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Nom d'utilisateur actuel</label>
+              <input type="text" id="param-current-user" disabled style="background:#f5f5f5" />
+            </div>
+            <div class="form-group">
+              <label>Nouveau nom d'utilisateur</label>
+              <input type="text" id="param-new-user" placeholder="Nouveau nom..." />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Changer le nom</button>
+        </form>
+      </div>
+
+      <!-- Changer mot de passe -->
+      <div class="section">
+        <h2>🔒 Changer le mot de passe</h2>
+        <form onsubmit="changePassword(event)">
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Mot de passe actuel</label>
+            <input type="password" id="param-old-pwd" placeholder="••••••••" required />
+          </div>
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Nouveau mot de passe</label>
+            <input type="password" id="param-new-pwd" placeholder="Min. 6 caractères" required />
+          </div>
+          <div class="form-group" style="margin-bottom:16px">
+            <label>Confirmer le nouveau mot de passe</label>
+            <input type="password" id="param-confirm-pwd" placeholder="••••••••" required />
+          </div>
+          <div id="param-pwd-msg" style="margin-bottom:12px;font-size:13px"></div>
+          <button type="submit" class="btn btn-primary">Mettre à jour le mot de passe</button>
+        </form>
+      </div>
+
+      <!-- Informations entreprise -->
+      <div class="section">
+        <h2>🏢 Informations entreprise</h2>
+
+        <!-- Logo -->
+        <div class="logo-upload-section">
+          <label>Logo de l'entreprise</label>
+          <div class="logo-preview-wrap" id="logo-preview-wrap">
+            <img id="logo-preview-img" src="" alt="Logo" style="display:none;max-height:80px;max-width:200px;border-radius:8px;object-fit:contain;"/>
+            <div id="logo-placeholder" class="logo-placeholder">
+              <span>🏢</span>
+              <span>Aucun logo sélectionné</span>
+            </div>
+          </div>
+          <div class="logo-actions">
+            <label class="btn btn-outline logo-upload-btn" for="logo-file-input">📁 Choisir un logo</label>
+            <input type="file" id="logo-file-input" accept="image/*" onchange="handleLogoUpload(event)" style="display:none"/>
+            <button class="btn btn-outline" onclick="removeLogo()" id="logo-remove-btn" style="display:none">🗑️ Supprimer le logo</button>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nom de l'entreprise</label>
+            <input type="text" id="param-company" placeholder="TabacPro" />
+          </div>
+          <div class="form-group">
+            <label>Téléphone</label>
+            <input type="text" id="param-phone" placeholder="+253 00 00 00 00" />
+          </div>
+          <div class="form-group">
+            <label>Adresse</label>
+            <input type="text" id="param-address" placeholder="Djibouti" />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="param-email" placeholder="contact@tabacpro.dj" />
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveCompanyInfo()">Sauvegarder</button>
+      </div>
+
+      <!-- Sécurité / session -->
+      <div class="section">
+        <h2>🛡️ Sécurité</h2>
+        <div class="param-info-row">
+          <span>Session active</span>
+          <span class="badge badge-ok" style="padding:4px 12px">Connecté ✓</span>
+        </div>
+        <div class="param-info-row">
+          <span>Utilisateur connecté</span>
+          <strong id="param-logged-user">—</strong>
+        </div>
+        <div class="param-info-row">
+          <span>Dernière connexion</span>
+          <span id="param-last-login">—</span>
+        </div>
+        <hr style="margin:16px 0;border:none;border-top:1px solid #f0f0f0">
+        <h3 style="color:#ef4444;margin-bottom:12px">⚠️ Zone dangereuse</h3>
+        <button class="btn btn-danger" onclick="confirmResetData()">
+          🗑️ Supprimer toutes les données
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL CONFIRMATION -->
+  <div id="modal" class="modal" style="display:none">
+    <div class="modal-box">
+      <h3>Confirmer la suppression</h3>
+      <p>Voulez-vous vraiment supprimer cet élément ?</p>
+      <div class="modal-actions">
+        <button class="btn btn-danger" onclick="confirmDelete()">Supprimer</button>
+        <button class="btn btn-outline" onclick="closeModal()">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
